@@ -543,7 +543,26 @@ uint32_t veml6030_read_light() {
     //            Multiply the value by the adequate value considering Integration Time of 100 ms and Gain of 1/8
     //            using data of page 5 of VEML6030 design application document: https://www.vishay.com/docs/84367/designingveml6030.pdf
     //            Finally, store the value in the variable luxVal_uncorrected.
-    //
+
+    uint8_t txBuffer[1];
+    uint8_t rxBuffer[2];
+
+    txBuffer[0] = VEML6030_ALS_REG;
+
+    // Write register address
+    if (i2c_write_blocking(i2c_default, VEML6030_I2C_ADDR,txBuffer, 1, true) == PICO_ERROR_GENERIC){
+        return 0;
+    }
+    if (i2c_read_blocking(i2c_default, VEML6030_I2C_ADDR,rxBuffer, 2, false) == PICO_ERROR_GENERIC){
+        return 0;
+    }
+
+     uint16_t raw = ((uint16_t)rxBuffer[1] << 8) | rxBuffer[0];
+
+    float lux_uncorr_f = raw * 0.2304f;
+    uint32_t luxVal_uncorrected = (uint32_t)lux_uncorr_f;
+
+
     // Tehtävä 2: Saadaksemme luminanssin meidän tulee lukea VEML6030_ALS_REG -rekisterin arvo (katso VEML6030-datalehti).
     //            Käytä funktioita i2c_write_blocking ja i2_read_blocking luminanssidatan keräämiseen.
     //            Nämä funktiot löytyvät Pico SDK:sta:
@@ -553,8 +572,7 @@ uint32_t veml6030_read_light() {
     //            Kerro arvo sopivalla kertoimella huomioiden 100 ms integraatioaika ja vahvistus 1/8
     //            käyttäen VEML6030-sovellussuunnitteluasiakirjan sivun 5 tietoja:https://www.vishay.com/docs/84367/designingveml6030.pdf
     //            Lopuksi tallenna arvo muuttujaan luxVal_uncorrected.
-  
-    uint32_t luxVal_uncorrected = 0; 
+
     if (luxVal_uncorrected>1000){
         // Polynomial is pulled from pg 10 of the datasheet. 
         // See https://github.com/sparkfun/SparkFun_Ambient_Light_Sensor_Arduino_Library/blob/efde0817bd6857863067bd1653a2cfafe6c68732/src/SparkFun_VEML6030_Ambient_Light_Sensor.cpp#L409
@@ -564,6 +582,7 @@ uint32_t veml6030_read_light() {
                             (1.0023 * luxVal_uncorrected);
         return luxVal;
     }
+    
     return  luxVal_uncorrected;
 }
 
